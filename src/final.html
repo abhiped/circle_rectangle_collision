@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <script src="https://cdn.rawgit.com/konvajs/konva/2.0.2/konva.min.js"></script>
+    <meta charset="UTF-8">
+    <title>Problem</title>
+    <link href="index.css" rel="stylesheet">
+</head>
+
+<body>
+  <button onclick="document.location.reload(true)">reset</button>
+  <button onclick="start()">start</button>
+      <div id="container"></div>
+<script>
+  function start(){
+      var width = window.innerWidth-25;
+      var height = window.innerHeight - 25;
+//variables------------------------------------------------
+        var dragging = false;
+        var lastPos;
+        var mode=1;
+        var count=0;
+        var action=1;
+        var width1,radius1,changex,changey;
+        var rectangle,group,rect1,circle1;
+
+//Define Konva Stage and Layers--------------------------------------
+
+      var stage = new Konva.Stage({
+        container: 'container',
+        width: width,
+        height: height
+      });
+      var layer = new Konva.Layer();  //For Canvas and drawing
+      stage.add(layer);
+      var layer1 = new Konva.Layer(); //For Collision Detection
+
+//----------------------------------------------------------------------
+
+//Drawing Stage-------------------------------------------------------
+
+      var canvas = document.createElement('canvas');
+      canvas.width = stage.width();
+      canvas.height = stage.height();
+
+      // creted canvas we can add to layer as "Konva.Image" element
+      var image = new Konva.Image({
+          image: canvas,
+          x : 0,
+          y : 0,
+          stroke: 'green',
+          shadowBlur: 5
+      });
+      layer.add(image);    //add to layer1
+      stage.draw();        //draw the image-layer on stage
+
+      var context = canvas.getContext('2d');
+        context.strokeStyle = "black";
+        context.lineJoin = "round";
+        context.lineWidth = 5;
+
+      //ALERT:=====================================================
+      alert("----------------Draw a Square Anywhere----------------");
+      //if mouse down
+      stage.on('contentMousedown.proto',function() {
+        lastPos = stage.getPointerPosition()
+        dragging=true;
+      });
+
+        //if mouse move
+      stage.on('contentMousemove.proto',function()
+        {
+          if (!dragging) {
+                  return;
+              }
+          if(mode==1)
+          {
+            var pos = stage.getPointerPosition();
+            width1=(pos.x-lastPos.x);
+            height=(pos.y-lastPos.y);
+             context.fillStyle='white';
+             context.beginPath();
+             context.rect(lastPos.x, lastPos.y, width1, width1);
+             context.fill();
+             layer.draw();
+          }
+        else if(mode==2)
+        {
+                var pos = stage.getPointerPosition();
+                 radius1 = Math.sqrt(Math.pow((lastPos.x - pos.x), 2) + Math.pow((lastPos.y - pos.y), 2));
+             context.beginPath();
+             context.fillStyle='white';
+             context.arc(lastPos.x, lastPos.y, radius1, 0, 2 * Math.PI,false);
+             context.fill();
+             layer.draw();
+        }
+      });
+
+        //if mouse up
+      stage.on('contentMouseup.proto',function()
+        {
+            dragging = false;
+            if(mode==2)       //Draw Circle
+          {
+              context.clearRect(0,0,2000,2000);
+              stage.add(layer1);
+              stage.draw();
+            drawCircle();
+            layer1.add(circle1);
+            layer1.draw();
+            stage.off('contentMousedown.proto');
+            stage.off('contentMouseup.proto');
+            stage.off('contentMousemove.proto');
+            alert("----------------Drag the Circle Anywhere----------------");
+
+          }
+            if(mode==1)       //Draw Square
+          {
+            rectangle={x:lastPos.x,y:lastPos.y};  //To hold x,y values of square
+            drawSquare();
+            alert("----------------Draw a Circle Anywhere----------------");
+            drawInnerSquare();
+          }
+          mode=2;
+          context.clearRect(0,0,2000,2000);
+        });
+
+        //Draw Square
+        function drawSquare()
+        {
+            rectangle={x:lastPos.x,y:lastPos.y};
+            rect1 = new Konva.Rect({
+             x: lastPos.x,
+             y: lastPos.y,
+             width: width1,
+             height: width1,
+             fill: 'white',
+             name: 'rect',
+             stroke:'black',
+             draggable: false,
+           });
+          layer.add(rect1);
+          layer.draw();
+        }
+
+        //Draw circle
+        function drawCircle()
+        {
+          circle1 = new Konva.Circle({
+             x: lastPos.x,
+             y: lastPos.y,
+             radius: radius1,
+             fill: 'blue',
+             name: 'circle',
+             draggable: true
+           });
+          return circle1;
+        }
+
+        //Draw Inner Squares
+        function drawInnerSquare()
+        {
+          changex=width1*0.1;
+          changey=width1*0.1;
+          for (var i = 0; i < 8; i++)
+          {
+            for (var j = 0; j < 8; j++) {
+              layer1.add(minirectangles());   //Group minisquares
+              changex=changex+width1*0.1;
+            }
+        changex=width1*0.1;
+        changey=changey+width1*0.1;
+        }
+        layer1.draw();
+      }
+
+      //Draw miniSquares
+      function minirectangles() {
+          var group = new Konva.Group({
+              x:0,
+              y:0,
+              draggable: false
+          });
+          var box = new Konva.Rect({
+                x: rectangle.x+changex,
+                y: rectangle.y+changey,
+                width: width1*0.06,
+                height: width1*0.06,
+                name:'fillShape' ,
+                fill: 'black',
+                stroke: 'white',
+                strokeWidth: 1,
+            });
+          group.add(box);
+          return group;
+      }
+
+//Collision Stage-------------------------------------------------------
+      //On dragging
+      layer1.on('dragmove', function (e) {
+          var target = e.target;
+          var targetRect = e.target.getClientRect();
+      //alert(stage.getPointerPosition().x,target.offset.x);
+          layer1.children.each(function (group) {
+              // do not check intersection with itself
+              if (group === target) {
+                  return;
+              }
+              if (RectCircleColliding(targetRect,group.getClientRect())) {
+                  group.findOne('.fillShape').fill('white');
+              } else {
+                  group.findOne('.fillShape').fill('black');
+              }
+              // do not need to call layer.draw() here
+              // because it will be called by dragmove action
+          });
+      })
+
+      //Checking collision
+      function RectCircleColliding(circl,rect){
+          var distX = Math.abs( circl.x+circl.width/2- rect.x-rect.width/2);
+          var distY = Math.abs( circl.y+circl.height/2- rect.y-rect.height/2);
+
+          if (distX > (rect.width/2 + radius1)) { return false; }
+          if (distY > (rect.height/2 + radius1)) { return false; }
+
+          if (distX <= (rect.width/2)) { return true; }
+          if (distY <= (rect.height/2)) { return true; }
+
+          var dx=distX-rect.width/2;
+          var dy=distY-rect.height/2;
+          return (dx*dx+dy*dy<=(radius1*radius1));
+      }
+    }
+</script>
+</body>
+</html>
